@@ -41,7 +41,7 @@ def create_pdf_report(grading_data, filename="report.pdf"):
         pdf.cell(200, 10, txt=f"Score final : {total_score if total_score is not None else 'N/A'}", ln=1)
 
         pdf.set_font("Arial", size=10)
-        pdf.multi_cell(0, 10, txt=str(grading_data))  # Dumping raw text for simplicity in demo
+        pdf.multi_cell(0, 10, txt=str(grading_data))
 
         pdf.output(out_path)
         return out_path
@@ -71,7 +71,7 @@ def correct_copy():
             "status": "success",
             "rubric_extracted": rubric,
             "grading_result": grading_result,
-            "pdf_report_url": pdf_path  # full path to generated file
+            "pdf_report_url": pdf_path
         })
 
     except Exception as e:

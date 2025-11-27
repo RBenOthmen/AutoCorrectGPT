@@ -48,6 +48,17 @@ class SmartPDFGenerator:
             parent=self.styles['Normal'],
             fontName='Helvetica-Bold'
         )
+    
+    def _escape_html(self, text):
+        """Escape special characters for ReportLab Paragraph"""
+        if not isinstance(text, str):
+            text = str(text)
+        # Escape special XML/HTML characters
+        text = text.replace('&', '&amp;')
+        text = text.replace('<', '&lt;')
+        text = text.replace('>', '&gt;')
+        # Keep single quotes and other characters as-is for ReportLab
+        return text
 
     def ai_detect_keys(self, data):
         """
@@ -246,11 +257,11 @@ class SmartPDFGenerator:
     def add_question_section(self, story, question_info, breakdown_structure):
         """Add a complete question section to the PDF"""
         # Question header (French)
-        story.append(Paragraph(f"Question : {question_info['question_id']}", self.heading_style))
+        story.append(Paragraph(f"Question : {self._escape_html(question_info['question_id'])}", self.heading_style))
 
         # Basic info (French labels)
         basic_info = [
-            ["Sujet :", question_info['topic']],
+            ["Sujet :", self._escape_html(question_info['topic'])],
             ["Points maximum :", str(question_info['max_points'])],
             ["Note de l'étudiant :", f"{question_info['student_score']}"],
         ]
@@ -277,8 +288,11 @@ class SmartPDFGenerator:
 
         # Student Answer (French)
         story.append(Paragraph("Réponse de l'étudiant :", self.subheading_style))
-        student_answer = question_info['student_answer'].replace('\n', '<br/>')
-        story.append(Paragraph(student_answer, self.normal_style))
+        # Split answer into paragraphs for better formatting
+        answer_paragraphs = question_info['student_answer'].split('\n')
+        for para in answer_paragraphs:
+            if para.strip():  # Only add non-empty paragraphs
+                story.append(Paragraph(self._escape_html(para), self.normal_style))
         story.append(Spacer(1, 0.2 * inch))
 
         # Horizontal line
@@ -295,7 +309,7 @@ class SmartPDFGenerator:
 
         # Overall Feedback (French)
         story.append(Paragraph("Commentaires généraux :", self.subheading_style))
-        story.append(Paragraph(question_info['overall_feedback'], self.normal_style))
+        story.append(Paragraph(self._escape_html(question_info['overall_feedback']), self.normal_style))
 
     def add_breakdown_table(self, story, breakdown_data, structure):
         """Add grading breakdown table with dynamic structure"""
@@ -312,40 +326,40 @@ class SmartPDFGenerator:
 
         # Create table headers (French)
         headers = [
-            element_key.replace('_', ' ').title(),
-            "Points max",
-            "Score",
-            "Justification"
+            Paragraph("<b>Critère</b>", self.normal_style),
+            Paragraph("<b>Points max</b>", self.normal_style),
+            Paragraph("<b>Score</b>", self.normal_style),
+            Paragraph("<b>Justification</b>", self.normal_style)
         ]
 
         breakdown_table_data = [headers]
 
-        # Add data rows
+        # Add data rows with Paragraph objects for proper text wrapping
         for item in breakdown_data:
             row = [
-                str(item.get(element_key, '')),
-                str(item.get(max_points_key, '')),
-                str(item.get(score_key, '')),
-                str(item.get(justification_key, ''))
+                Paragraph(self._escape_html(str(item.get(element_key, ''))), self.normal_style),
+                Paragraph(str(item.get(max_points_key, '')), self.normal_style),
+                Paragraph(str(item.get(score_key, '')), self.normal_style),
+                Paragraph(self._escape_html(str(item.get(justification_key, ''))), self.normal_style)
             ]
             breakdown_table_data.append(row)
 
-        # Create table
-        breakdown_table = Table(breakdown_table_data, colWidths=[2.2 * inch, 0.8 * inch, 0.7 * inch, 3.0 * inch])
+        # Create table with adjusted column widths
+        breakdown_table = Table(breakdown_table_data, colWidths=[2.0 * inch, 0.7 * inch, 0.6 * inch, 3.4 * inch])
         breakdown_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('ALIGN', (1, 0), (2, -1), 'CENTER'),
-            ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.whitesmoke]),
-            ('LEFTPADDING', (0, 0), (-1, -1), 4),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
         ]))
         story.append(breakdown_table)
 
